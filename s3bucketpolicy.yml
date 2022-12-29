@@ -1,0 +1,28 @@
+S3BucketPolicy:
+  Type: AWS::S3::BucketPolicy
+  Properties:
+    Bucket: !Ref DOC-EXAMPLE-BUCKET
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Sid: AllowS3BucketActions
+          Effect: Allow
+          Principal:
+            AWS:
+                - arn:aws:iam::101954721599:role/NEE-ECS-SM191-Task-Role
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-read-army-mdm-EC2-Role
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+                - arn:aws:iam::101954721599:role/NEE-Lambda-SM191-Role
+          Action:
+            - s3:ListBucket
+            - s3:PutObjectAcl
+            - s3:GetObject
+            - s3:PutObject
+            - s3:GetBucketLocation
+            - s3:GetObjectAcl
+            - s3:GetObjectVersion
+            - s3:DeleteObject
+            - s3:DeleteObjectVersion
+          Resource:
+            - arn:aws:s3:::*${AppCodeLower}*
+            - arn:aws:s3:::*${AppCodeLower}*/*

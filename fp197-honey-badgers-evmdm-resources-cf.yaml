@@ -1,0 +1,1476 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless EVMDM Resources Stack
+
+Parameters:
+  AppCode:
+    Type: String
+    Default: FP197
+  AppCodeLower:
+    Type: String
+    Default: fp197
+  AppName:
+    Type: String
+    Default: evmdm
+  TeamName:
+    Type: String
+    Default: honey-badgers
+  Region:
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+    Default: us-east-1
+  Department:
+    Type: String
+    Default: "Customer Service IT"
+  OwnerContact:
+    Type: String
+    Default: "nicolas.zerrate@fpl.com"
+  RolePermissionBoundary:
+    Type: String
+  RDSProxyPort:
+    Type: String
+    Description: 'Please Enter RDS Proxy Port'
+    Default: "5432"
+  SubnetID:
+    Description: Enter the subnet B,C for Non-Prod and A,B,C, for all other Environments
+    Type: String
+    AllowedValues:
+      - B,C,
+      - A,B,C,
+    Default: A,B,C,
+
+
+Mappings:
+  AccountIDMap:
+    "237980099910":
+      VPCShortName: FPLSandbox
+    "977465404123":
+      VPCShortName: FPLDev
+      RDSProxyEndpoint: "aws-fnv-fp197-evmdm-rds-proxy.proxy-c4ucntsmqjsv.us-east-1.rds.amazonaws.com"
+      RDSDatabaseName: evmdmd
+      SESDomain: "ev-mdm-nonprod@mdm.fpltest.com"
+      DeletionofS3Objects: 60
+      SNOWSNSTopic: "arn:aws:sns:us-east-1:516627182506:NE789-IncidentTicketTest"
+      SupportDL: "DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST@nexteraenergy.com"
+      BusinessDL: "DL-CSIT-MDMEV-BUSINESS-ALERTS-TEST@nexteraenergy.com"
+      SNOWDescriptionSEV3: "APP=MDM arsRequired=0 arsSeverity=SEV3 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      SNOWDescriptionSEV4: "APP=MDM arsRequired=0 arsSeverity=SEV4 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      BillingDeterCalEDTCron: "cron(0 16 * * ? *)"
+      BillingDeterCalESTCron: "cron(0 17 * * ? *)"
+      BillingDeterCalContEDTCron: "cron(0 22 * * ? *)"
+      BillingDeterCalContESTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContEDTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContESTCron: "cron(0 00 * * ? *)"
+      BillingResponseExportEDTCron: "cron(0 17 * * ? *)"
+      BillingResponseExportESTCron: "cron(0 18 * * ? *)"
+      ReadingPurgeEDTCron: "cron(0 02 * * ? *)"
+      ReadingPurgeESTCron: "cron(0 03 * * ? *)"
+      BillingCalcPurgeEDTCron: "cron(0 01 * * ? *)"
+      BillingCalcPurgeESTCron: "cron(0 02 * * ? *)"
+    "516627182506":
+      VPCShortName: FPLTest
+      RDSProxyEndpoint: "aws-ftv-fp197-evmdm-rds-proxy.proxy-cq5nryu9qrxd.us-east-1.rds.amazonaws.com"
+      RDSDatabaseName: evmdmt
+      SESDomain: "ev-mdm@mdm.fpltest.com"
+      DeletionofS3Objects: 60
+      SNOWSNSTopic: "arn:aws:sns:us-east-1:516627182506:NE789-IncidentTicketTest"
+      SupportDL: "DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST@nexteraenergy.com"
+      BusinessDL: "DL-CSIT-MDMEV-BUSINESS-ALERTS-TEST@nexteraenergy.com"
+      SNOWDescriptionSEV3: "APP=MDM arsRequired=0 arsSeverity=SEV3 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      SNOWDescriptionSEV4: "APP=MDM arsRequired=0 arsSeverity=SEV4 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      BillingDeterCalEDTCron: "cron(0 16 * * ? *)"
+      BillingDeterCalESTCron: "cron(0 17 * * ? *)"
+      BillingDeterCalContEDTCron: "cron(0 22 * * ? *)"
+      BillingDeterCalContESTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContEDTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContESTCron: "cron(0 00 * * ? *)"
+      BillingResponseExportEDTCron: "cron(0 17 * * ? *)"
+      BillingResponseExportESTCron: "cron(0 18 * * ? *)"
+      ReadingPurgeEDTCron: "cron(0 02 * * ? *)"
+      ReadingPurgeESTCron: "cron(0 03 * * ? *)"
+      BillingCalcPurgeEDTCron: "cron(0 01 * * ? *)"
+      BillingCalcPurgeESTCron: "cron(0 02 * * ? *)"
+    "485449107334":
+      VPCShortName: FPLQA
+      RDSProxyEndpoint: "aws-fqv-fp197-evmdm-rds-proxy.proxy-clfn2h31qwxn.us-east-1.rds.amazonaws.com"
+      RDSDatabaseName: evmdmq
+      SESDomain: "ev-mdm@mdm.fplqa.com"
+      DeletionofS3Objects: 60
+      SNOWSNSTopic: "arn:aws:sns:us-east-1:485449107334:NE789-IncidentTicketProd"
+      SupportDL: "DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST@nexteraenergy.com"
+      BusinessDL: "DL-CSIT-MDMEV-BUSINESS-ALERTS-TEST@nexteraenergy.com"
+      SNOWDescriptionSEV3: "APP=MDM arsRequired=0 arsSeverity=SEV3 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      SNOWDescriptionSEV4: "APP=MDM arsRequired=0 arsSeverity=SEV4 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      BillingDeterCalEDTCron: "cron(0 16 * * ? *)"
+      BillingDeterCalESTCron: "cron(0 17 * * ? *)"
+      BillingDeterCalContEDTCron: "cron(0 22 * * ? *)"
+      BillingDeterCalContESTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContEDTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContESTCron: "cron(0 00 * * ? *)"
+      BillingResponseExportEDTCron: "cron(0 17 * * ? *)"
+      BillingResponseExportESTCron: "cron(0 18 * * ? *)"
+      ReadingPurgeEDTCron: "cron(0 02 * * ? *)"
+      ReadingPurgeESTCron: "cron(0 03 * * ? *)"
+      BillingCalcPurgeEDTCron: "cron(0 01 * * ? *)"
+      BillingCalcPurgeESTCron: "cron(0 02 * * ? *)"
+    "430004966399":
+      VPCShortName: FPLProd
+      RDSProxyEndpoint: "aws-fpv-fp197-evmdm-rds-proxy.proxy-cgqep0gwcrlg.us-east-1.rds.amazonaws.com"
+      RDSDatabaseName: evmdmp
+      SESDomain: "ev-mdm@mdm.fpl.com"
+      DeletionofS3Objects: 180
+      SNOWSNSTopic: "arn:aws:sns:us-east-1:430004966399:NE789-IncidentTicketProd"
+      SupportDL: "DL-CSIT-MDMEV-SUPPORT-ALERTS@nexteraenergy.com"
+      BusinessDL: "DL-CSIT-MDMEV-BUSINESS-ALERTS@nexteraenergy.com"
+      SNOWDescriptionSEV3: "APP=MDM arsRequired=1 arsSeverity=SEV3 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      SNOWDescriptionSEV4: "APP=MDM arsRequired=1 arsSeverity=SEV4 arsAutoTag=TEST_MDM_LOGS emailRequired=1 emailSubject=Tivoli notification emailAddress=DL-CSIT-MDMEV-SUPPORT-ALERTS-TEST"
+      BillingDeterCalEDTCron: "cron(0 16 * * ? *)"
+      BillingDeterCalESTCron: "cron(0 17 * * ? *)"
+      BillingDeterCalContEDTCron: "cron(0 22 * * ? *)"
+      BillingDeterCalContESTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContEDTCron: "cron(0 23 * * ? *)"
+      BillingResponseExportContESTCron: "cron(0 00 * * ? *)"
+      BillingResponseExportEDTCron: "cron(0 17 * * ? *)"
+      BillingResponseExportESTCron: "cron(0 18 * * ? *)"
+      ReadingPurgeEDTCron: "cron(0 02 * * ? *)"
+      ReadingPurgeESTCron: "cron(0 03 * * ? *)"
+      BillingCalcPurgeEDTCron: "cron(0 01 * * ? *)"
+      BillingCalcPurgeESTCron: "cron(0 02 * * ? *)"
+    "202055847252":
+      VPCShortName: FPLDR
+      
+Conditions:
+  Dosubnet3exists: !Not [!Equals [!Select [ 2, !Split [ ",", !Ref SubnetID]], ""]]
+
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    MemorySize: 5120
+    Timeout: 900
+    Environment:
+      Variables:
+        aws_console: true
+        secret_name:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-RDS-Secret
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        aws_account: !Ref AWS::AccountId
+        rds_proxy_host: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", RDSProxyEndpoint]
+        rds_proxy_port: !Ref RDSProxyPort
+        database: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", RDSDatabaseName]
+        http_proxy: "http://gopzen.fpl.com:10262"
+        https_proxy: "http://gopzen.fpl.com:10262"
+        no_proxy: "*.fpl.com,*.neeaws.local"
+        from: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SESDomain]
+    EventInvokeConfig:
+      MaximumRetryAttempts: 0
+    Tags:
+      AppCode: !Sub ${AppCode}
+      AppName: !Sub ${AppName}
+    VpcConfig:
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Join ['-',[ 'SG', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], 'L1SG' ] ]
+        - Fn::ImportValue:
+            !Join ['-', [ 'SG', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], 'L3SGDBPostGresOLTPandDSS' ] ]
+        - Fn::ImportValue: !Sub "${AppCode}-${AppName}-Lambda-L4-SG"
+      SubnetIds:
+        - Fn::ImportValue:
+            !Join ['-',[ 'VPC', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], !Select [ 0, !Split [ ",", !Ref SubnetID]], 'App', 'SUBNET' ] ]
+        - Fn::ImportValue:
+            !Join ['-',[ 'VPC', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], !Select [ 1, !Split [ ",", !Ref SubnetID]], 'App', 'SUBNET' ] ]
+        - Fn::If:
+          - Dosubnet3exists
+          - !ImportValue
+              'Fn::Join':
+                - '-'
+                - - VPC
+                  - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName]
+                  - !Select [ 2, !Split [ ",", !Ref SubnetID]]
+                  - App
+                  - SUBNET
+          - !Ref 'AWS::NoValue'
+Resources:
+  BackEndBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-s3
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      NotificationConfiguration: 
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: Billing/Response/Incoming/
+                  - Name: suffix
+                    Value: .txt
+            Queue: !GetAtt SFTPServiceSQS.Arn
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: ObjectsDeletionRule
+            Status: Enabled
+            ExpirationInDays: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", DeletionofS3Objects]
+  LambdaFunctionDatabaseLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Database Layer
+      LayerName: !Join 
+        - '-'
+        - - !Join 
+            - ''
+            - - '2'
+              - !ImportValue Account-Global-AccountCodeLower
+              - !ImportValue 
+                'Fn::Join':
+                  - '-'
+                  - - Account-Global-RegionCodeLower
+                    - !Ref 'AWS::Region'
+          - !Ref AppCodeLower
+          - !Ref AppName
+          - DatabaseLayer
+      ContentUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: DatabaseLayer/nodejs.zip
+      CompatibleRuntimes:
+        - nodejs14.x
+  LambdaFunctionMailLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Mail layer
+      LayerName: !Join 
+        - '-'
+        - - !Join 
+            - ''
+            - - '2'
+              - !ImportValue Account-Global-AccountCodeLower
+              - !ImportValue 
+                'Fn::Join':
+                  - '-'
+                  - - Account-Global-RegionCodeLower
+                    - !Ref 'AWS::Region'
+          - !Ref AppCodeLower
+          - !Ref AppName
+          - MailLayer
+      ContentUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: MailLayer/nodejs.zip
+      CompatibleRuntimes:
+        - nodejs14.x
+  LambdaFunctionUtilityLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Utility layer
+      LayerName: !Join 
+        - '-'
+        - - !Join 
+            - ''
+            - - '2'
+              - !ImportValue Account-Global-AccountCodeLower
+              - !ImportValue 
+                'Fn::Join':
+                  - '-'
+                  - - Account-Global-RegionCodeLower
+                    - !Ref 'AWS::Region'
+          - !Ref AppCodeLower
+          - !Ref AppName
+          - UtilityLayer
+      ContentUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: UtilsLayer/nodejs.zip
+      CompatibleRuntimes:
+        - nodejs14.x
+  LambdaFunctionCloudWatchAlarmLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: CloudWatchAlarmLayer
+      LayerName: !Join 
+        - '-'
+        - - !Join 
+            - ''
+            - - '2'
+              - !ImportValue Account-Global-AccountCodeLower
+              - !ImportValue 
+                'Fn::Join':
+                  - '-'
+                  - - Account-Global-RegionCodeLower
+                    - !Ref 'AWS::Region'
+          - !Ref AppCodeLower
+          - !Ref AppName
+          - CloudWatchAlarmLayer
+      ContentUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: CloudWatchAlarmLayer/nodejs.zip
+      CompatibleRuntimes:
+        - nodejs14.x
+  SFTPServiceSQS:
+    Type: AWS::SQS::Queue
+    Properties: 
+      DelaySeconds: 0
+      MaximumMessageSize: 262144
+      MessageRetentionPeriod: 3600
+      QueueName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-SQS-${AppCodeLower}-${AppName}-SFTPServiceQueue
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      ReceiveMessageWaitTimeSeconds: 0
+      Tags:
+        - Key: AppCode
+          Value: !Sub ${AppCode}
+        - Key: AppName
+          Value: !Sub ${AppName}
+      VisibilityTimeout: 600
+  QueuePolicy:
+    Type: 'AWS::SQS::QueuePolicy'
+    DependsOn:
+      - SFTPServiceSQS
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: 
+              Service: "s3.amazonaws.com"
+            Action:
+              - "SQS:SendMessage"
+              - "SQS:ReceiveMessage"
+            Resource: !GetAtt SFTPServiceSQS.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !GetAtt BackEndBucket.Arn
+      Queues:
+        - !Ref SFTPServiceSQS
+  IntervalReadingImportLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-IntervalReadingImport-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: IntervalReadingImport.zip
+      Events:
+        IntervalRdgImportEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref BackEndBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: Reading/Incoming/Interval/
+                  - Name: suffix
+                    Value: ".csv"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  IntervalRdgImportAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-IntervalReadingImport-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-IntervalReadingImport-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingRequestImportLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingRequestImport-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingRequestImport.zip
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingReqImportAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingRequestImport-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingRequestImport-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingDeterminantsCal:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingDeterminantsCal.zip
+      Events:
+        BilDetCalEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingDeterCalEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterCal-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingDeterCal-LF-Event-EDT'
+            Enabled: True
+        BilDetCalEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingDeterCalESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterCal-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingDeterCal-LF-Event-EST'
+            Enabled: False
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingDeterCalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingResponseExport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingResponseExport.zip
+      Events:
+        BilResExEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingResponseExportEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingResponseExport-LF-Event-EDT'
+            Enabled: True
+        BilResExEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingResponseExportESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingResponseExport-LF-Event-EST'
+            Enabled: False
+      Environment:
+        Variables:
+          bucket_name: 
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-s3
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingResExportAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  TrainCycleDataInsert:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-TrainCycleDataInsert-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: TrainCycleDataInsert.zip
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  TrainCycleDataInsertAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-TrainCycleDataInsert-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-TrainCycleDataInsert-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  HeartbeatDataImport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HeartbeatDataImport-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: HeartbeatDataImport.zip
+      Events:
+        HeartbeatdataEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref BackEndBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: Reading/Incoming/Heartbeat/
+                  - Name: suffix
+                    Value: ".csv"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  HeartbeatDataImportAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HeartbeatDataImport-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HeartbeatDataImport-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingCalendarUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalendarUpdate-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingCalendarUpdate.zip
+      Environment:
+        Variables:
+          to: !Join [',',[!FindInMap [AccountIDMap, !Ref "AWS::AccountId", SupportDL], !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BusinessDL] ] ]
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingCalUpdateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalendarUpdate-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalendarUpdate-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  EmailAlertLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-EmailAlert-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionCloudWatchAlarmLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: EmailAlert.zip
+      Environment:
+        Variables:
+          to: !Join [',',[!FindInMap [AccountIDMap, !Ref "AWS::AccountId", SupportDL], !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BusinessDL] ] ]
+  EmailAlertAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-EmailAlert-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV4]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-EmailAlert-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  FileTransferNotification:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-FileTransferNotification-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionUtilityLayer
+        - !Ref LambdaFunctionCloudWatchAlarmLayer
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: FileTransferNotification.zip
+      Environment:
+        Variables:
+          bucket_name: 
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-s3
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+          to: !Join [',',[!FindInMap [AccountIDMap, !Ref "AWS::AccountId", SupportDL], !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BusinessDL] ] ]
+          environment: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName]
+  FileTransferAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-FileTransferNotification-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-FileTransferNotification-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingDeterminantsCalCont:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-Cont-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingDeterminantsCalCont.zip
+      Events:
+        BilDtClContEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingDeterCalContEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterCalCont-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingDeterCalCont-LF-Event-EDT'
+            Enabled: True
+        BilDtClContEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingDeterCalContESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterCalCont-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingDeterCalCont-LF-Event-EST'
+            Enabled: False
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingDetCalContAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-Cont-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingDeterminantsCalculation-Cont-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingResponseExportCont:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-Cont-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingResponseExportCont.zip
+      Events:
+        BilResExCtEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingResponseExportContEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExportCont-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingResponseExportCont-LF-Event-EDT'
+            Enabled: True
+        BilResExCtEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingResponseExportContESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExportCont-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingResponseExportCont-LF-Event-EST'
+            Enabled: False
+      Environment:
+        Variables:
+          bucket_name: 
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-s3
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingResExpContAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-Cont-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingResponseExport-Cont-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  HolidayScheduleUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HolidayScheduleUpdate-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionMailLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: HolidayScheduleUpdate.zip
+      Environment:
+        Variables:
+          to: !Join [',',[!FindInMap [AccountIDMap, !Ref "AWS::AccountId", SupportDL], !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BusinessDL] ] ]
+          environment: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName]
+      Events:
+        HolidaySchEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref BackEndBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: HolidaySchedule/Incoming/
+                  - Name: suffix
+                    Value: ".txt"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  HolidayScheUpdateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HolidayScheduleUpdate-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-HolidayScheduleUpdate-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  ReadingPurgeLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-ReadingPurge-LF 
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionCloudWatchAlarmLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: ReadingPurge.zip
+      Events:
+        ReadingPurgeEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", ReadingPurgeEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-ReadingPurge-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for ReadingPurge-LF-Event-EDT'
+            Enabled: True
+        ReadingPurgeEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", ReadingPurgeESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-ReadingPurge-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for ReadingPurge-LF-Event-EST'
+            Enabled: False
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  ReadingPurgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-ReadingPurge-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-ReadingPurge-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  BillingCalcPurgeLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalcPurge-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionCloudWatchAlarmLayer
+        - !Ref LambdaFunctionUtilityLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: BillingCalcPurge.zip
+      Events:
+        BlgCalcPurgEDT:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingCalcPurgeEDTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalcPurge-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingCalcPurge-LF-Event-EDT'
+            Enabled: True
+        BlgCalcPurgEST:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BillingCalcPurgeESTCron]
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalcPurge-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for BillingCalcPurge-LF-Event-EST'
+            Enabled: False
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  BillingCalcPurgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalcPurge-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-BillingCalcPurge-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+  MeterRdgUploadFailAlarmLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-MeterReadingUploadFailure-Alarm-LF
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Handler: index.handler
+      Layers:
+        - !Ref LambdaFunctionDatabaseLayer
+        - !Ref LambdaFunctionCloudWatchAlarmLayer
+        - !Ref LambdaFunctionMailLayer
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-Lambda-Role
+      PackageType: Zip
+      CodeUri:
+        Bucket:
+          Fn::Sub:
+            - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-cf-s3
+            - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+              Region:
+                Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+        Key: MeterReadingUploadFailure.zip
+      Environment:
+        Variables:
+          to: !Join [',',[!FindInMap [AccountIDMap, !Ref "AWS::AccountId", SupportDL], !FindInMap [AccountIDMap, !Ref "AWS::AccountId", BusinessDL] ] ]
+      Events:
+        MtrRdgUpdFailEDT:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 8/4 * * ? *)'
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-MeterReadingUploadFailure-LF-Event-EDT
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for MeterReadingUploadFailure-LF-Event-EDT'
+            Enabled: True
+        MtrRdgUpdFailEST:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 9/4 * * ? *)'
+            Name:
+              Fn::Sub:
+                - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-MeterReadingUploadFailure-LF-Event-EST
+                - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                  Region:
+                    Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+            Description: 'Cron Schedule for MeterReadingUploadFailure-LF-Event-EST'
+            Enabled: False
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt EmailAlertLambda.Arn
+  MeterRdgUploadFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-MeterReadingUploadFailure-Alarm
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      AlarmDescription: !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWDescriptionSEV3]
+      AlarmActions:
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", SNOWSNSTopic]
+      Namespace: "AWS/Lambda"
+      MetricName: "FP197AlarmInvok"
+      Dimensions:
+        - Name: "FunctionName"
+          Value:
+            Fn::Sub:
+              - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-MeterReadingUploadFailure-Alarm-LF
+              - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+                Region:
+                  Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Statistic: "SampleCount"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: "notBreaching"
+

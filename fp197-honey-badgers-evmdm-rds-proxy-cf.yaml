@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Serverless EVMDM RDS-PROXY Stack
+
+Parameters:
+  AppCode:
+    Type: String
+    Default: FP197
+  AppCodeLower:
+    Type: String
+    Default: fp197
+  AppName:
+    Type: String
+    Default: evmdm
+  TeamName:
+    Type: String
+    Default: honey-badgers
+  Region:
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+    Default: us-east-1
+  Department:
+    Type: String
+    Default: "Customer Service IT"
+  OwnerContact:
+    Type: String
+    Default: "nicolas.zerrate@fpl.com"
+  RolePermissionBoundary:
+    Type: String
+
+Mappings:
+  AccountIDMap:
+    "237980099910":
+      VPCShortName: FPLSandbox
+    "977465404123":
+      VPCShortName: FPLDev
+      DBClusterIdentifier: aws-fnv-fp197-evmdm-cluster-0e76bac974a5-rds
+    "516627182506":
+      VPCShortName: FPLTest
+      DBClusterIdentifier: aws-ftv-fp197-evmdm-cluster-0ea43d95ffc3-rds
+    "485449107334":
+      VPCShortName: FPLQA
+      DBClusterIdentifier: aws-fqv-fp197-evmdm-cluster-0e6124870d7d-rds
+    "430004966399":
+      VPCShortName: FPLProd
+      DBClusterIdentifier: aws-fpv-fp197-evmdm-cluster-0e64ac39408d-rds
+    "202055847252":
+      VPCShortName: FPLDR
+
+Resources:
+  RDSSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: 
+        Fn::Sub:
+          - 2${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-RDS-Secret
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      Description: EVMDM Application RDS Secret
+      SecretString: '{"username":"evmdm_app_owner","password":"evmdm_app_owner123"}'
+      Tags:
+        - Key: AppCode
+          Value: !Sub ${AppCode}
+        - Key: AppName
+          Value: !Sub ${AppName}
+  RDSProxy:
+    Type: AWS::RDS::DBProxy
+    Properties: 
+      Auth: 
+        - {AuthScheme: SECRETS, SecretArn: !Ref RDSSecret, IAMAuth: DISABLED}
+      DBProxyName:
+        Fn::Sub:
+          - aws-${AccountCodeLower}${Region}-${AppCodeLower}-${AppName}-RDS-Proxy
+          - AccountCodeLower: !ImportValue Account-Global-AccountCodeLower
+            Region:
+              Fn::ImportValue: !Sub "Account-Global-RegionCodeLower-${AWS::Region}"
+      DebugLogging: false
+      EngineFamily: POSTGRESQL
+      IdleClientTimeout: 1800 # 30 minutes
+      RequireTLS: false
+      RoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/fp197-honey-badgers-evmdm-RDS-Role
+      VpcSecurityGroupIds: 
+        - Fn::ImportValue: !Sub "${AppCode}-${AppName}-RDS-Proxy-L4-SG"
+      VpcSubnetIds: 
+        - Fn::ImportValue:
+            !Join ['-',[ 'VPC', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], 'A', 'DataBase', 'SUBNET' ] ]
+        - Fn::ImportValue:
+            !Join ['-',[ 'VPC', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], 'B', 'DataBase', 'SUBNET' ] ]
+        - Fn::ImportValue:
+            !Join ['-',[ 'VPC', !FindInMap [AccountIDMap, !Ref "AWS::AccountId", VPCShortName], 'C', 'DataBase', 'SUBNET' ] ]
+      Tags:
+        - Key: AppCode
+          Value: !Sub ${AppCode}
+        - Key: AppName
+          Value: !Sub ${AppName}
+  RDSProxyTargetGroup:
+    Type: AWS::RDS::DBProxyTargetGroup
+    Properties: 
+      ConnectionPoolConfigurationInfo: 
+        ConnectionBorrowTimeout: 120
+        MaxConnectionsPercent: 100
+        MaxIdleConnectionsPercent: 50
+      DBClusterIdentifiers: 
+        - !FindInMap [AccountIDMap, !Ref "AWS::AccountId", DBClusterIdentifier]
+      DBProxyName: !Ref RDSProxy
+      TargetGroupName: default
